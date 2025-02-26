@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng dụng Gộp File</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 90vh;
+        }
+
+        .panel {
+            flex: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+        }
+
+        .panel-header {
+            padding: 15px;
+            background-color: #4a6fa5;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drop-area {
+            flex: 1;
+            border: 3px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            color: #555;
+            background-color: #fafafa;
+            transition: all 0.3s;
+            margin: 15px;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+
+        .drop-area.active {
+            border-color: #4a6fa5;
+            background-color: rgba(74, 111, 165, 0.1);
+        }
+
+        .file-list {
+            margin-top: 20px;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            padding: 8px;
+            background-color: #e9e9e9;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            word-break: break-all;
+            padding-right: 10px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .text-content {
+            flex: 1;
+            padding: 15px;
+            resize: none;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            outline: none;
+            font-family: 'Courier New', monospace;
+        }
+
+        .button-area {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+            gap: 10px;
+        }
+
+        .copy-btn,
+        .action-btn,
+        .clear-btn {
+            padding: 10px 20px;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .copy-btn:hover,
+        .action-btn:hover,
+        .clear-btn:hover {
+            background-color: #3a5780;
+        }
+
+        .copy-btn:active,
+        .action-btn:active,
+        .clear-btn:active {
+            transform: translateY(1px);
+        }
+
+        .clear-btn {
+            background-color: #d9534f;
+        }
+
+        .clear-btn:hover {
+            background-color: #c9302c;
+        }
+
+        .copy-success {
+            margin-right: 15px;
+            color: #4CAF50;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .copy-success.show {
+            opacity: 1;
+        }
+
+        .icon {
+            margin-right: 10px;
+            font-size: 2rem;
+            color: #4a6fa5;
+        }
+
+        .stats {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4a6fa5;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .panel {
+                margin-bottom: 20px;
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Panel bên trái để kéo thả file -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>Kéo thả files hoặc folders</span>
+                <button id="clearBtn" class="clear-btn" style="padding: 5px 10px;">Xóa tất cả</button>
+            </div>
+            <div id="dropArea" class="drop-area">
+                <div class="icon">📁</div>
+                <p>Kéo thả files hoặc folders vào đây</p>
+                <p>hoặc</p>
+                <input type="file" id="fileInput" multiple webkitdirectory directory style="display: none;">
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button onclick="document.getElementById('fileInput').click()" class="copy-btn">Chọn Files</button>
+                    <button onclick="requestDirectoryAccess()" class="copy-btn">Chọn Folder</button>
+                </div>
+                <div id="fileList" class="file-list"></div>
+            </div>
+        </div>
+
+        <!-- Panel bên phải để hiển thị nội dung -->
+        <div class="panel">
+            <div class="panel-header">Nội dung gộp</div>
+            <div class="content-area">
+                <textarea id="textContent" class="text-content" readonly
+                    placeholder="Nội dung của các file sẽ hiển thị ở đây..."></textarea>
+                <div id="stats" class="stats">Files: 0 | Tổng kích thước: 0 KB | Context: 0 ký tự</div>
+                <div class="button-area">
+                    <span id="copySuccess" class="copy-success">Đã sao chép!</span>
+                    <button id="copyBtn" class="copy-btn">Sao chép nội dung</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Đang xử lý files...</p>
+        <p id="loadingStatus"></p>
+    </div>
+
+    <script>
+        // Lấy các phần tử DOM
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const textContent = document.getElementById('textContent');
+        const copyBtn = document.getElementById('copyBtn');
+        const copySuccess = document.getElementById('copySuccess');
+        const clearBtn = document.getElementById('clearBtn');
+        const stats = document.getElementById('stats');
+        const loading = document.getElementById('loading');
+        const loadingStatus = document.getElementById('loadingStatus');
+
+        // Mảng lưu trữ tất cả các file đã chọn
+        let files = [];
+
+        // Danh sách mở rộng file text phổ biến
+        const textFileExtensions = [
+            // Web
+            'html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx', 'json', 'xml', 'svg', 'xhtml',
+            // PHP
+            'php', 'phtml', 'php3', 'php4', 'php5', 'phps', 'inc',
+            // Python
+            'py', 'pyw', 'pyc', 'pyd', 'pyo', 'pyx', 'ipynb',
+            // Ruby
+            'rb', 'rbw', 'rake', 'gemspec', 'erb',
+            // Java
+            'java', 'class', 'jsp', 'jspx', 'properties',
+            // C/C++
+            'c', 'cpp', 'cc', 'h', 'hpp', 'hxx', 'cxx',
+            // C#
+            'cs', 'csx', 'razor',
+            // Go
+            'go', 'mod',
+            // Rust
+            'rs', 'rlib',
+            // Scala
+            'scala', 'sc',
+            // Swift
+            'swift',
+            // JavaScript/TypeScript
+            'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',
+            // Shell scripts
+            'sh', 'bash', 'zsh', 'fish', 'cmd', 'bat', 'ps1',
+            // SQL
+            'sql', 'sqlite', 'psql',
+            // Document formats
+            'txt', 'md', 'markdown', 'rst', 'tex', 'log', 'rtf', 'wiki', 'csv', 'tsv',
+            // Config files
+            'yaml', 'yml', 'toml', 'ini', 'conf', 'cfg', 'env', 'htaccess',
+            // Other code files
+            'dart', 'lua', 'r', 'pl', 'pm', 'kt', 'kts', 'groovy', 'gradle',
+            // Data files
+            'csv', 'tsv', 'json', 'xml', 'yaml', 'yml', 'graphql', 'gql',
+            // Documentation
+            'md', 'txt', 'rst', 'adoc', 'wiki', 'textile',
+            // VCS
+            'gitignore', 'gitattributes', 'gitmodules',
+            // Build systems
+            'makefile', 'cmake', 'dockerfile', 'npmrc', 'yarnrc',
+            // Functional languages
+            'hs', 'lhs', 'elm', 'clj', 'cljs', 'fs', 'fsx', 'ml', 'mli', 'erl', 'hrl',
+            // Office documents (text-based)
+            'tex', 'bib', 'sty'
+        ];
+
+        // Danh sách MIME type có thể đọc được
+        const readableMimeTypes = [
+            'text/',
+            'application/json',
+            'application/xml',
+            'application/javascript',
+            'application/x-javascript',
+            'application/ecmascript',
+            'application/typescript',
+            'application/x-httpd-php',
+            'application/x-sh',
+            'application/x-csh',
+            'application/xhtml+xml',
+            'application/x-tex',
+            'application/x-latex'
+        ];
+
+        // Ngăn chặn hành vi mặc định khi kéo thả
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Hiệu ứng khi kéo file vào vùng thả
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('active');
+        }
+
+        function unhighlight() {
+            dropArea.classList.remove('active');
+        }
+
+        // Xử lý sự kiện khi thả file hoặc folder
+        dropArea.addEventListener('drop', async function (e) {
+            const dt = e.dataTransfer;
+
+            // Kiểm tra nếu có thư mục
+            if (dt.items) {
+                await handleDropWithItems(dt.items);
+            } else {
+                // Fallback cho trình duyệt không hỗ trợ DataTransferItemList
+                handleFiles([...dt.files]);
+            }
+        });
+
+        // Xử lý khi kéo thả có items (có thể là file hoặc folder)
+        async function handleDropWithItems(items) {
+            loading.style.display = 'flex';
+            loadingStatus.textContent = 'Đang quét files...';
+
+            let newFiles = [];
+            let promises = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+
+                // Kiểm tra xem item có phải là file hay folder
+                if (item.kind === 'file') {
+                    const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+
+                    if (entry) {
+                        if (entry.isFile) {
+                            // Nếu là file, thêm vào danh sách
+                            promises.push(new Promise(resolve => {
+                                entry.file(file => {
+                                    newFiles.push(file);
+                                    resolve();
+                                });
+                            }));
+                        } else if (entry.isDirectory) {
+                            // Nếu là thư mục, đọc toàn bộ file trong thư mục đó
+                            promises.push(readDirectoryEntries(entry, newFiles));
+                        }
+                    } else {
+                        // Fallback nếu webkitGetAsEntry không được hỗ trợ
+                        const file = item.getAsFile();
+                        if (file) newFiles.push(file);
+                    }
+                }
+            }
+
+            // Đợi tất cả các promises hoàn tất
+            await Promise.all(promises);
+
+            // Lọc các file text
+            const textFiles = newFiles.filter(file => isTextFile(file));
+
+            handleFiles(textFiles);
+            loading.style.display = 'none';
+        }
+
+        // Đọc đệ quy toàn bộ file từ một thư mục
+        async function readDirectoryEntries(directoryEntry, fileList) {
+            const reader = directoryEntry.createReader();
+
+            // Hàm đọc các entries trong thư mục
+            async function readEntries() {
+                return new Promise((resolve, reject) => {
+                    reader.readEntries(entries => resolve(entries), error => reject(error));
+                });
+            }
+
+            let entries;
+            const promises = [];
+
+            do {
+                entries = await readEntries();
+
+                for (let i = 0; i < entries.length; i++) {
+                    const entry = entries[i];
+
+                    if (entry.isFile) {
+                        // Nếu là file, thêm vào danh sách
+                        promises.push(new Promise(resolve => {
+                            entry.file(file => {
+                                // Thêm đường dẫn tương đối vào file object để hiển thị
+                                file.relativePath = directoryEntry.fullPath + '/' + file.name;
+                                fileList.push(file);
+                                resolve();
+                            });
+                        }));
+                    } else if (entry.isDirectory) {
+                        // Nếu là thư mục, đọc đệ quy
+                        promises.push(readDirectoryEntries(entry, fileList));
+                    }
+                }
+            } while (entries.length > 0);
+
+            // Đợi tất cả các promises
+            await Promise.all(promises);
+        }
+
+        // Xử lý sự kiện khi chọn files từ input
+        fileInput.addEventListener('change', function () {
+            const newFiles = [...this.files];
+            handleFiles(newFiles);
+        });
+
+        // Hỗ trợ chọn thư mục
+        async function requestDirectoryAccess() {
+            try {
+                // Sử dụng File System Access API nếu được hỗ trợ
+                if ('showDirectoryPicker' in window) {
+                    loading.style.display = 'flex';
+                    loadingStatus.textContent = 'Đang chọn thư mục...';
+
+                    const directoryHandle = await window.showDirectoryPicker();
+                    const fileHandles = [];
+
+                    // Hàm đệ quy để đọc tất cả các file trong thư mục
+                    async function getFilesRecursively(directoryHandle, path = '') {
+                        for await (const entry of directoryHandle.values()) {
+                            const entryPath = path + '/' + entry.name;
+
+                            if (entry.kind === 'file') {
+                                fileHandles.push({ handle: entry, path: entryPath });
+                            } else if (entry.kind === 'directory') {
+                                await getFilesRecursively(entry, entryPath);
+                            }
+                        }
+                    }
+
+                    await getFilesRecursively(directoryHandle);
+
+                    // Chuyển đổi các file handles thành File objects
+                    loading.style.display = 'flex';
+                    loadingStatus.textContent = 'Đang đọc files...';
+
+                    const newFiles = [];
+
+                    for (let i = 0; i < fileHandles.length; i++) {
+                        const fileHandle = fileHandles[i];
+                        const file = await fileHandle.handle.getFile();
+                        // Thêm đường dẫn tương đối vào file
+                        file.relativePath = fileHandle.path;
+
+                        if (isTextFile(file)) {
+                            newFiles.push(file);
+                        }
+
+                        // Cập nhật trạng thái
+                        loadingStatus.textContent = `Đang đọc files... (${i + 1}/${fileHandles.length})`;
+                    }
+
+                    handleFiles(newFiles);
+                } else {
+                    // Fallback cho trình duyệt không hỗ trợ File System Access API
+                    alert('Trình duyệt của bạn không hỗ trợ chọn thư mục. Vui lòng kéo thả thư mục vào hoặc dùng trình duyệt Chrome/Edge mới nhất.');
+                }
+            } catch (err) {
+                console.error('Error accessing directory:', err);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Xóa tất cả file
+        clearBtn.addEventListener('click', function () {
+            files = [];
+            displayFileList();
+            textContent.value = '';
+            updateStats();
+        });
+
+        // Xử lý các file được chọn
+        function handleFiles(newFiles) {
+            // Thêm files mới vào mảng
+            files = [...files, ...newFiles];
+
+            // Hiển thị danh sách file và đọc nội dung
+            displayFileList();
+            readFilesContent();
+        }
+
+        // Hiển thị danh sách file
+        function displayFileList() {
+            fileList.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+
+                const fileInfo = document.createElement('div');
+                // Hiển thị tên file với đường dẫn tương đối nếu có
+                const displayName = file.relativePath ? file.relativePath.substring(1) : file.name;
+
+                fileInfo.innerHTML = `
+          <div class="file-name" title="${displayName}">${displayName}</div>
+          <div class="file-size">${formatFileSize(file.size)}</div>
+        `;
+
+                const removeButton = document.createElement('button');
+                removeButton.innerHTML = '✕';
+                removeButton.className = 'copy-btn';
+                removeButton.style.padding = '3px 8px';
+                removeButton.onclick = (e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                };
+
+                fileItem.appendChild(fileInfo);
+                fileItem.appendChild(removeButton);
+                fileList.appendChild(fileItem);
+            });
+
+            updateStats();
+        }
+
+        // Cập nhật thống kê
+        function updateStats() {
+            const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+            const charCount = textContent.value.length;
+            stats.textContent = `Files: ${files.length} | Tổng kích thước: ${formatFileSize(totalSize)} | Context: ${charCount.toLocaleString()} ký tự`;
+        }
+
+        // Định dạng kích thước file
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Xóa file
+        function removeFile(index) {
+            files.splice(index, 1);
+            displayFileList();
+            readFilesContent();
+        }
+
+        // Kiểm tra xem file có phải là file text/code không
+        function isTextFile(file) {
+            // Kiểm tra mime type
+            if (file.type) {
+                for (const mimeType of readableMimeTypes) {
+                    if (file.type.startsWith(mimeType)) {
+                        return true;
+                    }
+                }
+            }
+
+            // Kiểm tra phần mở rộng file
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (textFileExtensions.includes(extension)) {
+                return true;
+            }
+
+            // Kiểm tra tên file không có phần mở rộng nhưng là text file phổ biến
+            const filenameWithoutExt = file.name.toLowerCase();
+            const commonTextFiles = ['dockerfile', 'makefile', 'readme', 'license', 'authors', 'changelog',
+                'gitignore', 'bashrc', 'zshrc', '.env', '.gitignore', '.npmrc'];
+
+            if (commonTextFiles.includes(filenameWithoutExt)) {
+                return true;
+            }
+
+            // Nếu file nhỏ (dưới 100KB), hãy coi là text file
+            if (file.size < 100 * 1024) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Đọc nội dung của tất cả các file
+        async function readFilesContent() {
+            textContent.value = '';
+
+            if (files.length === 0) {
+                updateStats(); // Cập nhật thống kê khi không có file
+                return;
+            }
+
+            loading.style.display = 'flex';
+
+            try {
+                const contents = [];
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    loadingStatus.textContent = `Đang đọc file ${i + 1}/${files.length}: ${file.name}`;
+
+                    try {
+                        // Đọc nội dung file
+                        const content = await readFileAsync(file);
+
+                        // Hiển thị đường dẫn tương đối nếu có
+                        const displayPath = file.relativePath ? file.relativePath.substring(1) : file.name;
+                        contents.push(`/* ===== ${displayPath} ===== */\n${content}\n\n`);
+                    } catch (error) {
+                        console.error('Error reading file:', file.name, error);
+                        contents.push(`/* Không thể đọc file: ${file.name} - ${error.message} */\n\n`);
+                    }
+                }
+
+                // Gộp nội dung tất cả các file
+                textContent.value = contents.join('');
+                updateStats(); // Cập nhật thống kê sau khi đọc files
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Hàm đọc file với Promise
+        function readFileAsync(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error('Lỗi đọc file'));
+
+                reader.readAsText(file);
+            });
+        }
+
+        // Xử lý sự kiện sao chép nội dung
+        copyBtn.addEventListener('click', function () {
+            if (navigator.clipboard && window.isSecureContext) {
+                // Sử dụng Clipboard API nếu được hỗ trợ (HTTPS)
+                navigator.clipboard.writeText(textContent.value)
+                    .then(() => {
+                        copySuccess.classList.add('show');
+                        setTimeout(() => {
+                            copySuccess.classList.remove('show');
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Không thể sao chép:', err);
+                        fallbackCopyText();
+                    });
+            } else {
+                // Fallback cho các trình duyệt không hỗ trợ
+                fallbackCopyText();
+            }
+        });
+
+        function fallbackCopyText() {
+            textContent.select();
+            document.execCommand('copy');
+
+            copySuccess.classList.add('show');
+            setTimeout(() => {
+                copySuccess.classList.remove('show');
+            }, 2000);
+
+            // Hủy chọn văn bản
+            window.getSelection().removeAllRanges();
+        }
+
+        // Thêm sự kiện lắng nghe thay đổi nội dung để cập nhật số ký tự
+        textContent.addEventListener('input', updateStats);
+    </script>
+</body>
+
+</html>
