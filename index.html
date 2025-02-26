@@ -746,6 +746,177 @@
 
         // Thêm sự kiện lắng nghe thay đổi nội dung để cập nhật số ký tự
         textContent.addEventListener('input', updateStats);
+
+
+        // Thêm sự kiện paste cho toàn trang web
+        document.addEventListener('paste', handlePaste);
+
+        // Hàm xử lý khi người dùng paste (Ctrl+V)
+        async function handlePaste(e) {
+            // Ngăn chặn hành vi mặc định
+            e.preventDefault();
+
+            const clipboardData = e.clipboardData;
+
+            // Kiểm tra xem clipboard có chứa files không
+            if (clipboardData && clipboardData.files && clipboardData.files.length > 0) {
+                // Lấy files từ clipboard
+                const pastedFiles = [...clipboardData.files];
+
+                // Hiển thị loading screen
+                loading.style.display = 'flex';
+                loadingStatus.textContent = 'Đang xử lý files đã paste...';
+
+                try {
+                    // Lọc các file text
+                    const textFiles = pastedFiles.filter(file => isTextFile(file));
+
+                    // Thêm thông tin đường dẫn tương đối (nếu có thể)
+                    textFiles.forEach(file => {
+                        // Thêm placeholder cho đường dẫn tương đối vì 
+                        // clipboardData thường không giữ thông tin đường dẫn
+                        file.relativePath = null;
+                    });
+
+                    // Xử lý các file đã paste
+                    handleFiles(textFiles);
+
+                    console.log(`Đã paste ${textFiles.length} file văn bản`);
+                } catch (error) {
+                    console.error('Lỗi khi xử lý files từ clipboard:', error);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            } else if (clipboardData && clipboardData.items && clipboardData.items.length > 0) {
+                // Chrome và một số trình duyệt hỗ trợ DataTransferItem để xử lý thư mục
+                loading.style.display = 'flex';
+                loadingStatus.textContent = 'Đang xử lý nội dung đã paste...';
+
+                try {
+                    let newFiles = [];
+                    let promises = [];
+
+                    for (let i = 0; i < clipboardData.items.length; i++) {
+                        const item = clipboardData.items[i];
+
+                        // Kiểm tra xem item có phải là file hay không
+                        if (item.kind === 'file') {
+                            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+
+                            if (entry) {
+                                if (entry.isFile) {
+                                    // Nếu là file, thêm vào danh sách
+                                    promises.push(new Promise(resolve => {
+                                        entry.file(file => {
+                                            newFiles.push(file);
+                                            resolve();
+                                        });
+                                    }));
+                                } else if (entry.isDirectory) {
+                                    // Nếu là thư mục, đọc toàn bộ file trong thư mục đó
+                                    promises.push(readDirectoryEntries(entry, newFiles));
+                                }
+                            } else {
+                                // Fallback nếu webkitGetAsEntry không được hỗ trợ
+                                const file = item.getAsFile();
+                                if (file) newFiles.push(file);
+                            }
+                        }
+                    }
+
+                    // Đợi tất cả các promises hoàn tất
+                    await Promise.all(promises);
+
+                    // Lọc các file text
+                    const textFiles = newFiles.filter(file => isTextFile(file));
+
+                    handleFiles(textFiles);
+                    console.log(`Đã paste ${textFiles.length} file văn bản`);
+                } catch (error) {
+                    console.error('Lỗi khi xử lý nội dung từ clipboard:', error);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            } else {
+                // Xử lý văn bản thông thường được paste
+                // Nếu muốn xử lý văn bản thông thường, bạn có thể thêm code ở đây
+                // Ví dụ: const pastedText = clipboardData.getData('text');
+            }
+        }
+
+        // Tối ưu hóa chức năng paste với File System Access API (Chrome)
+        async function tryAdvancedPaste() {
+            try {
+                if ('clipboard' in navigator && 'read' in navigator.clipboard) {
+                    const clipboardItems = await navigator.clipboard.read();
+
+                    loading.style.display = 'flex';
+                    loadingStatus.textContent = 'Đang đọc clipboard...';
+
+                    let newFiles = [];
+
+                    for (const clipboardItem of clipboardItems) {
+                        // Xử lý các loại MIME types khác nhau
+                        for (const type of clipboardItem.types) {
+                            // Chỉ xử lý các loại file/directory
+                            if (type.startsWith('image/') ||
+                                type.startsWith('text/') ||
+                                type.startsWith('application/')) {
+                                const blob = await clipboardItem.getType(type);
+                                // Tạo File object từ Blob
+                                const file = new File([blob], `pasted_${Date.now()}.${getExtensionFromMime(type)}`, {
+                                    type: blob.type
+                                });
+
+                                if (isTextFile(file)) {
+                                    newFiles.push(file);
+                                }
+                            }
+                        }
+                    }
+
+                    if (newFiles.length > 0) {
+                        handleFiles(newFiles);
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.log('Advanced clipboard API not supported or failed:', error);
+                return false;
+            } finally {
+                loading.style.display = 'none';
+            }
+
+            return false;
+        }
+
+        // Hàm hỗ trợ để lấy phần mở rộng từ MIME type
+        function getExtensionFromMime(mimeType) {
+            const mimeExtensionMap = {
+                'text/plain': 'txt',
+                'text/html': 'html',
+                'text/css': 'css',
+                'text/javascript': 'js',
+                'application/json': 'json',
+                'application/xml': 'xml',
+                'image/svg+xml': 'svg'
+                // Thêm các MIME types khác nếu cần
+            };
+
+            return mimeExtensionMap[mimeType] || 'txt';
+        }
+
+        // Cải thiện UX để hiển thị cho người dùng biết tính năng paste tồn tại
+        // Thêm dòng thông báo vào drop area
+        const dropAreaText = document.querySelector('#dropArea p');
+        if (dropAreaText) {
+            dropAreaText.innerHTML = 'Kéo thả files hoặc folders vào đây<br><small>hoặc paste (Ctrl+V) từ File Explorer</small>';
+        }
+
+        // Thêm sự kiện focus cho body để nhận paste
+        document.body.addEventListener('click', function () {
+            document.body.focus();
+        });
     </script>
 </body>
 
