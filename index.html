@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ứng dụng Gộp File</title>
     <style>
-        /* (CSS của bạn giữ nguyên, không thay đổi) */
+        /* ===== CSS Styles (Giữ nguyên như cũ) ===== */
         * {
             margin: 0;
             padding: 0;
@@ -25,6 +25,7 @@
             max-width: 1200px;
             margin: 0 auto;
             height: 90vh;
+            /* Chiều cao viewport trừ padding */
         }
 
         .panel {
@@ -35,6 +36,8 @@
             display: flex;
             flex-direction: column;
             background-color: white;
+            min-height: 400px;
+            /* Chiều cao tối thiểu cho panel */
         }
 
         .panel-header {
@@ -49,6 +52,7 @@
 
         .drop-area {
             flex: 1;
+            /* Cho phép drop-area co giãn */
             border: 3px dashed #ccc;
             padding: 20px;
             text-align: center;
@@ -63,6 +67,11 @@
             margin: 15px;
             border-radius: 8px;
             overflow-y: auto;
+            /* Thêm thanh cuộn nếu cần */
+            position: relative;
+            /* Để định vị file list */
+            min-height: 200px;
+            /* Đảm bảo drop area có chiều cao tối thiểu */
         }
 
         .drop-area.active {
@@ -70,11 +79,21 @@
             background-color: rgba(74, 111, 165, 0.1);
         }
 
+        .drop-area-content {
+            /* Nội dung chính của drop area (icon, text, buttons) */
+            margin-bottom: 15px;
+            /* Tạo khoảng cách với file list */
+        }
+
         .file-list {
-            margin-top: 20px;
+            margin-top: 15px;
             width: 100%;
-            max-height: 300px;
+            max-height: calc(100% - 150px);
+            /* Chiều cao tối đa, trừ đi phần content và padding */
             overflow-y: auto;
+            /* Chỉ cuộn khi cần */
+            text-align: left;
+            /* Căn trái cho danh sách file */
         }
 
         .file-item {
@@ -87,12 +106,29 @@
             align-items: center;
         }
 
+        .file-info {
+            flex-grow: 1;
+            /* Cho phép phần info co giãn */
+            overflow: hidden;
+            /* Ẩn phần thừa */
+            margin-right: 10px;
+        }
+
+
         .file-name {
             font-size: 14px;
             font-weight: bold;
             color: #333;
-            word-break: break-all;
-            padding-right: 10px;
+            white-space: nowrap;
+            /* Ngăn xuống dòng */
+            overflow: hidden;
+            /* Ẩn phần tên file dài */
+            text-overflow: ellipsis;
+            /* Hiển thị dấu ... */
+            display: block;
+            /* Đảm bảo chiếm đủ chiều rộng */
+            cursor: default;
+            /* Con trỏ mặc định */
         }
 
         .file-size {
@@ -100,15 +136,40 @@
             color: #666;
         }
 
+        .remove-btn {
+            /* Style riêng cho nút xóa */
+            padding: 3px 8px;
+            background-color: #e74c3c;
+            /* Màu đỏ nhạt */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+            /* Không co lại */
+        }
+
+        .remove-btn:hover {
+            background-color: #c0392b;
+            /* Màu đỏ đậm hơn khi hover */
+        }
+
         .content-area {
             flex: 1;
+            /* Cho phép content-area co giãn */
             padding: 15px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            /* Ngăn nội dung tràn ra */
         }
 
         .text-content {
             flex: 1;
+            /* Cho phép textarea co giãn */
             padding: 15px;
             resize: none;
             border: 1px solid #ccc;
@@ -117,13 +178,21 @@
             line-height: 1.5;
             outline: none;
             font-family: 'Courier New', monospace;
+            overflow-y: auto;
+            /* Thêm thanh cuộn nếu cần */
+            min-height: 150px;
+            /* Chiều cao tối thiểu */
         }
 
         .button-area {
             display: flex;
             justify-content: flex-end;
+            align-items: center;
+            /* Căn giữa các nút */
             margin-top: 15px;
             gap: 10px;
+            flex-shrink: 0;
+            /* Ngăn không cho co lại */
         }
 
         .copy-btn,
@@ -153,6 +222,8 @@
 
         .clear-btn {
             background-color: #d9534f;
+            padding: 5px 10px;
+            /* Giảm padding cho nút Xóa tất cả */
         }
 
         .clear-btn:hover {
@@ -160,10 +231,13 @@
         }
 
         .copy-success {
-            margin-right: 15px;
+            margin-right: 10px;
+            /* Khoảng cách với nút copy */
             color: #4CAF50;
             opacity: 0;
             transition: opacity 0.3s;
+            font-size: 14px;
+            font-weight: bold;
         }
 
         .copy-success.show {
@@ -181,6 +255,8 @@
             color: #888;
             margin-top: 5px;
             text-align: right;
+            flex-shrink: 0;
+            /* Ngăn không cho co lại */
         }
 
         .loading {
@@ -196,6 +272,7 @@
             align-items: center;
             z-index: 1000;
             display: none;
+            /* Ẩn ban đầu */
         }
 
         .spinner {
@@ -218,15 +295,52 @@
             }
         }
 
+        /* Responsive */
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
                 height: auto;
+                /* Chiều cao tự động trên mobile */
+                padding: 10px;
+                /* Giảm padding trên mobile */
             }
 
             .panel {
                 margin-bottom: 20px;
-                height: 50vh;
+                height: auto;
+                /* Chiều cao tự động */
+                min-height: 300px;
+                /* Giảm chiều cao tối thiểu */
+            }
+
+            .panel:last-child {
+                margin-bottom: 0;
+                /* Bỏ margin dưới của panel cuối */
+            }
+
+            .drop-area {
+                min-height: 150px;
+            }
+
+            .text-content {
+                min-height: 100px;
+            }
+
+            .button-area {
+                flex-direction: column;
+                /* Xếp nút dọc */
+                align-items: flex-end;
+                /* Căn phải */
+            }
+
+            .copy-success {
+                margin-right: 0;
+                margin-bottom: 5px;
+                /* Thêm khoảng cách dưới */
+                text-align: right;
+                /* Căn phải */
+                width: 100%;
+                /* Chiếm đủ chiều rộng */
             }
         }
     </style>
@@ -234,32 +348,35 @@
 
 <body>
     <div class="container">
-        <!-- Panel bên trái -->
         <div class="panel">
             <div class="panel-header">
                 <span>Kéo thả files hoặc folders</span>
-                <button id="clearBtn" class="clear-btn" style="padding: 5px 10px;">Xóa tất cả</button>
+                <button id="clearBtn" class="clear-btn">Xóa tất cả</button>
             </div>
             <div id="dropArea" class="drop-area">
-                <div class="icon">📁</div>
-                <p>Kéo thả files hoặc folders vào đây<br><small>hoặc paste (Ctrl+V) từ File Explorer</small></p>
-                <p>hoặc</p>
-                <input type="file" id="fileInput" multiple webkitdirectory directory style="display: none;">
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <button onclick="document.getElementById('fileInput').click()" class="copy-btn">Chọn Files</button>
-                    <button onclick="requestDirectoryAccess()" class="copy-btn">Chọn Folder</button>
+                <div class="drop-area-content">
+                    <div class="icon">📁</div>
+                    <p>Kéo thả files hoặc folders vào đây<br><small>hoặc paste (Ctrl+V) từ File Explorer</small></p>
+                    <p>hoặc</p>
+                    <input type="file" id="fileInput" multiple webkitdirectory directory style="display: none;">
+                    <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: center;">
+                        <button
+                            onclick="document.getElementById('fileInput').setAttribute('webkitdirectory', false); document.getElementById('fileInput').setAttribute('directory', false); document.getElementById('fileInput').click()"
+                            class="action-btn">Chọn Files
+                        </button>
+                        <button onclick="requestDirectoryAccess()" class="action-btn">Chọn Folder</button>
+                    </div>
                 </div>
                 <div id="fileList" class="file-list"></div>
             </div>
         </div>
 
-        <!-- Panel bên phải -->
         <div class="panel">
             <div class="panel-header">Nội dung gộp</div>
             <div class="content-area">
                 <textarea id="textContent" class="text-content" readonly
                     placeholder="Nội dung của các file sẽ hiển thị ở đây..."></textarea>
-                <div id="stats" class="stats">Files: 0 | Tổng kích thước: 0 KB | Context: 0 ký tự</div>
+                <div id="stats" class="stats">Files: 0 | Tổng kích thước: 0 Bytes | Context: 0 ký tự</div>
                 <div class="button-area">
                     <span id="copySuccess" class="copy-success">Đã sao chép!</span>
                     <button id="copyBtn" class="copy-btn">Sao chép nội dung</button>
@@ -274,7 +391,1089 @@
         <p id="loadingStatus"></p>
     </div>
 
-    <script src="index.js"></script>
+    <script>
+        // ===== JavaScript Code (Xem bên dưới) =====
+        // --- DOM Elements ---
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const textContent = document.getElementById('textContent');
+        const copyBtn = document.getElementById('copyBtn');
+        const copySuccess = document.getElementById('copySuccess');
+        const clearBtn = document.getElementById('clearBtn');
+        const stats = document.getElementById('stats');
+        const loading = document.getElementById('loading');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const dropAreaTextContainer = document.querySelector('#dropArea .drop-area-content'); // Container cho text và buttons
+
+        // --- Constants ---
+        const textFileExtensions = [
+            // Code & Markup
+            'html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'json', 'xml', 'svg', 'xhtml', 'vue',
+            'php', 'phtml', 'php3', 'php4', 'php5', 'phps', 'inc',
+            'py', 'pyw', 'pyx', 'ipynb', // Python related
+            'rb', 'rbw', 'rake', 'gemspec', 'erb', // Ruby related
+            'java', 'jsp', 'jspx', 'properties', // Java related
+            'c', 'cpp', 'cc', 'h', 'hpp', 'hxx', 'cxx', // C/C++
+            'cs', 'csx', 'razor', // C#
+            'go', 'mod', // Go
+            'rs', 'rlib', // Rust
+            'scala', 'sc', // Scala
+            'swift', // Swift
+            'sh', 'bash', 'zsh', 'fish', 'cmd', 'bat', 'ps1', // Shell scripts
+            'sql', 'sqlite', 'psql', // SQL
+            'yaml', 'yml', 'toml', 'ini', 'conf', 'cfg', 'env', 'htaccess', // Config files
+            'dart', 'lua', 'r', 'pl', 'pm', 'kt', 'kts', 'groovy', 'gradle', // Other languages
+            'graphql', 'gql', // GraphQL
+            'hs', 'lhs', 'elm', 'clj', 'cljs', 'fs', 'fsx', 'ml', 'mli', 'erl', 'hrl', // Functional languages
+            'tex', 'bib', 'sty', // LaTeX
+
+            // Text & Data
+            'txt', 'md', 'markdown', 'rst', 'tex', 'log', 'rtf', 'wiki', 'csv', 'tsv',
+            'adoc', 'textile',
+
+            // Git & Build related (often text)
+            'gitignore', 'gitattributes', 'gitmodules',
+            'makefile', 'cmake', 'dockerfile', 'npmrc', 'yarnrc', 'babelrc', 'eslintrc', 'prettierrc',
+            'editorconfig', 'browserslistrc', 'procfile', 'lock' // Common lock files
+        ];
+
+        const nonTextFileExtensions = [
+            // Images
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'heic', 'heif', 'avif',
+            // Audio
+            'mp3', 'wav', 'aac', 'ogg', 'flac', 'm4a',
+            // Video
+            'mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'wmv',
+            // Fonts
+            'woff', 'woff2', 'ttf', 'otf', 'eot',
+            // Archives
+            'zip', 'rar', 'tar', 'gz', '7z', 'bz2', 'xz',
+            // Documents (often binary or complex structure)
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+            // Executables & Libraries
+            'exe', 'dll', 'so', 'dylib', 'app', 'msi', 'dmg', 'deb', 'rpm',
+            // Database files
+            'db', 'sqlite3', 'mdb', 'accdb',
+            // Other binary
+            'bin', 'dat', 'iso', 'img', 'class', 'pyd', 'pyc', 'pyo', // Compiled Python
+            'o', 'a', // Object files, archives
+            'jar', // Java archives
+            'swf' // Flash
+        ];
+
+        const readableMimeTypes = [
+            'text/',
+            'application/json',
+            'application/xml',
+            'application/javascript', // Covers 'js' and related types
+            'application/typescript',
+            'application/x-httpd-php',
+            'application/x-sh',
+            'application/xhtml+xml',
+            'image/svg+xml' // SVG is XML-based and readable
+        ];
+
+        // Default folders to ignore (add more as needed)
+        const defaultIgnoredFolders = [
+            '.git', 'node_modules', 'vendor', 'bower_components', 'storage',
+            'build', 'dist', 'out', 'target', // Common build output folders
+            '.svn', '.hg', '.bzr', // Other VCS folders
+            '.idea', '.vscode', '.project', '.settings', // IDE/Editor folders
+            '__pycache__', '.pytest_cache', '.mypy_cache', // Python cache
+            'coverage', 'logs', 'tmp', 'temp', // Temporary/log folders
+            '*.lockb', '*.log', '*.tmp', '*.bak', '*.swp', // Common temp/backup file patterns
+        ];
+
+        const mimeExtensionMap = {
+            'text/plain': 'txt',
+            'text/html': 'html',
+            'text/css': 'css',
+            'text/javascript': 'js',
+            'application/json': 'json',
+            'application/xml': 'xml',
+            'image/svg+xml': 'svg'
+            // Add more mappings if needed for pasted content
+        };
+
+        // --- State Variables ---
+        let files = []; // Array to hold the File objects to be processed
+        let gitignoreRules = []; // Parsed rules from .gitignore
+        let gitignoreFound = false; // Flag if .gitignore was found and parsed
+        let rootPath = ''; // The root path of the dropped/selected folder structure
+
+        // --- Utility Functions ---
+
+        // Prevents default browser behavior for drag/drop events
+        const preventDefaults = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        // Adds highlight style to drop area
+        const highlight = () => dropArea.classList.add('active');
+        // Removes highlight style from drop area
+        const unhighlight = () => dropArea.classList.remove('active');
+
+        // Formats file size in bytes to a readable string (KB, MB, GB)
+        const formatFileSize = (bytes) => {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            // Handle potential NaN or Infinity for very large numbers if necessary
+            if (i >= sizes.length) return parseFloat((bytes / Math.pow(k, sizes.length - 1)).toFixed(2)) + ' ' + sizes[sizes.length - 1];
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+
+        // Gets a likely file extension from a MIME type (for pasted content)
+        const getExtensionFromMime = (mimeType) => mimeExtensionMap[mimeType] || 'txt'; // Default to .txt
+
+        // Reads a File object as text asynchronously
+        const readFileAsync = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error(`Lỗi đọc file: ${e.target.error?.message || 'Không rõ'}`));
+                reader.readAsText(file); // Reads as text
+            });
+        };
+
+        // --- File Type Checking ---
+
+        // Checks if a file is likely a text file based on extension, MIME type, and name
+        const isTextFile = (file) => {
+            if (!file || !file.name) return false; // Basic validation
+
+            const fileNameLower = file.name.toLowerCase();
+            const extension = fileNameLower.split('.').pop();
+
+            // 1. Check against known non-text extensions (highest priority)
+            if (nonTextFileExtensions.includes(extension)) {
+                // console.log(`Skipping non-text extension: ${file.name}`);
+                return false;
+            }
+
+            // 2. Check MIME type if available (reliable for browser-provided types)
+            if (file.type) {
+                // Allow specific readable MIME types
+                if (readableMimeTypes.some(mime => file.type.startsWith(mime))) {
+                    return true;
+                }
+                // Block common non-text MIME prefixes
+                if (file.type.startsWith('image/') || file.type.startsWith('audio/') || file.type.startsWith('video/') || file.type.startsWith('font/') || file.type.startsWith('application/octet-stream')) {
+                    // console.log(`Skipping non-text MIME type: ${file.name} (${file.type})`);
+                    return false;
+                }
+            }
+
+            // 3. Check against known text extensions
+            if (textFileExtensions.includes(extension)) {
+                return true;
+            }
+
+            // 4. Check common text files without extensions or with unusual extensions
+            const commonTextFiles = ['dockerfile', 'makefile', 'readme', 'license', 'authors', 'changelog',
+                'procfile', 'gemfile', 'rakefile', 'jenkinsfile', 'vagrantfile',
+                '.env', '.gitattributes', '.gitmodules', '.npmrc', '.yarnrc',
+                '.babelrc', '.eslintrc', '.prettierrc', '.editorconfig', '.browserslistrc'];
+            // Check if the entire filename matches one of the common names
+            if (commonTextFiles.includes(fileNameLower)) {
+                return true;
+            }
+            // Check if the filename *starts* with a dot and matches (e.g., .gitignore)
+            if (fileNameLower.startsWith('.') && commonTextFiles.includes(fileNameLower.substring(1))) {
+                return true;
+            }
+
+
+            // 5. Fallback: Guess based on size (optional, can be unreliable)
+            // Allow small files, assuming they might be text config files etc.
+            // Block very large files unless extension/MIME already confirmed them.
+            // const maxSizeGuess = 5 * 1024 * 1024; // 5 MB limit for guessing
+            // if (file.size > maxSizeGuess) {
+            //     console.log(`Skipping large file with unknown type: ${file.name}`);
+            //     return false;
+            // }
+
+            // If none of the above rules matched, assume it's NOT a text file
+            // to be safer and avoid including binary data.
+            // console.log(`Skipping file with undetermined type: ${file.name}`);
+            return false;
+        };
+
+
+        // --- Gitignore and Folder Ignoring Logic ---
+
+        // Parses the content of a .gitignore file into an array of rules
+        const parseGitignore = async (file) => {
+            try {
+                const content = await readFileAsync(file);
+                gitignoreRules = content
+                    .split('\n') // Split into lines
+                    .map(line => line.trim()) // Trim whitespace
+                    .filter(line => line && !line.startsWith('#')) // Remove empty lines and comments
+                    // Basic handling for escaped '#' or '!' - real gitignore is more complex
+                    .map(rule => rule.replace(/^\\#/, '#').replace(/^\\!/, '!')); // Handle escaped chars
+
+                console.log(`Đã đọc .gitignore với ${gitignoreRules.length} quy tắc.`);
+                // console.log('Các quy tắc:', gitignoreRules);
+                gitignoreFound = true;
+                return true;
+            } catch (error) {
+                console.error('Lỗi khi đọc hoặc phân tích file .gitignore:', error);
+                gitignoreRules = []; // Reset rules on error
+                gitignoreFound = false;
+                return false;
+            }
+        };
+
+        // Simple glob-to-regex conversion (basic cases)
+        // Note: This is a simplified version and doesn't cover all gitignore complexities.
+        const globToRegex = (pattern) => {
+            // Escape regex special characters, except for * and /
+            let regexString = pattern.replace(/([.+?^${}()|\[\]\\])/g, '\\$1');
+            // Handle ** (match any sequence including slashes) - replace carefully
+            regexString = regexString.replace(/\*\*/g, '.*');
+            // Handle * (match anything except slashes)
+            regexString = regexString.replace(/\*/g, '[^/]*');
+            // Handle beginning/end anchors based on slashes
+            if (regexString.startsWith('/')) {
+                regexString = '^' + regexString.substring(1); // Anchored to root
+            } else if (regexString.includes('/')) {
+                // Contains slash but doesn't start with one - match anywhere
+                // Or could be specific path component - gitignore logic is complex here
+                // For simplicity, let's treat it as potentially matching anywhere
+                // regexString = '(^|/)' + regexString; // Might need refinement
+            } else {
+                // No slashes - match filename anywhere in the path
+                regexString = '(^|/)' + regexString;
+            }
+
+            // Handle directory pattern (ends with /)
+            if (pattern.endsWith('/')) {
+                regexString = regexString.slice(0, -1); // Remove the trailing slash from pattern
+                regexString += '(/|$)'; // Match directory itself or path ending with it
+            } else {
+                // Match file or directory
+                regexString += '($|/)';
+            }
+
+            // Allow matching anywhere if no leading slash
+            if (!pattern.startsWith('/')) {
+                regexString = `(^|/)${regexString.replace(/^\(\^\|\/\)/, '')}`; // Match anywhere if no leading slash
+            }
+
+
+            try {
+                return new RegExp(regexString);
+            } catch (e) {
+                console.warn(`Invalid regex generated for gitignore pattern: "${pattern}" -> "${regexString}"`, e);
+                return null; // Return null for invalid patterns
+            }
+        };
+
+
+        // Checks if a given relative path should be ignored based on gitignore rules and defaults
+        const isPathIgnored = (relativePath) => {
+            if (!relativePath) return false;
+
+            // Normalize path: remove leading/trailing slashes for consistent matching
+            const normalizedPath = relativePath.replace(/^\/+|\/+$/g, '');
+            const pathSegments = normalizedPath.split('/');
+            const isDir = relativePath.endsWith('/'); // Check if original path indicated a directory
+
+            // 1. Check against default ignored folder names (simple check)
+            for (const ignored of defaultIgnoredFolders) {
+                const isIgnoredPatternDir = ignored.endsWith('/');
+                const ignoredBase = isIgnoredPatternDir ? ignored.slice(0, -1) : ignored;
+
+                // Check if any path segment matches a default ignored name
+                if (pathSegments.includes(ignoredBase)) {
+                    // If the pattern is for a directory, ensure we're matching a directory segment
+                    if (isIgnoredPatternDir) {
+                        // Check if the path *is* this directory or *contains* this directory
+                        if (normalizedPath === ignoredBase || normalizedPath.startsWith(ignoredBase + '/')) {
+                            // console.log(`Path ${normalizedPath} ignored by default folder rule (dir): ${ignored}`);
+                            return true;
+                        }
+                    } else {
+                        // If the pattern is just a name, match if segment exists
+                        // console.log(`Path ${normalizedPath} ignored by default folder rule (name): ${ignored}`);
+                        return true; // Matches file or directory segment
+                    }
+                }
+            }
+
+
+            // 2. Check against .gitignore rules if found
+            if (!gitignoreFound || gitignoreRules.length === 0) {
+                return false; // No gitignore rules to check
+            }
+
+            let isExplicitlyIncluded = false;
+            let isIgnored = false;
+
+            for (const rule of gitignoreRules) {
+                let currentRule = rule;
+                let isNegation = false;
+
+                if (currentRule.startsWith('!')) {
+                    isNegation = true;
+                    currentRule = currentRule.substring(1);
+                }
+                // Skip empty rules after removing '!'
+                if (!currentRule) continue;
+
+                // Handle directory-specific patterns
+                const isDirRule = currentRule.endsWith('/');
+                if (isDirRule) {
+                    currentRule = currentRule.slice(0, -1);
+                }
+
+                // Simple matching (exact match or segment match) - less accurate than regex/glob
+                // Check if the normalized path *is* the rule or *starts with* the rule + '/'
+                let match = false;
+                if (currentRule.startsWith('/')) { // Anchored to root
+                    match = normalizedPath.startsWith(currentRule.substring(1));
+                } else { // Not anchored, match anywhere
+                    match = normalizedPath === currentRule ||
+                        normalizedPath.startsWith(currentRule + '/') ||
+                        normalizedPath.includes('/' + currentRule + '/') ||
+                        normalizedPath.endsWith('/' + currentRule);
+                }
+
+                // If it's a directory rule, ensure we are matching a directory path
+                if (match && isDirRule && !isDir && !normalizedPath.startsWith(currentRule + '/')) {
+                    match = false; // File path doesn't match a directory rule unless it's within that dir
+                }
+                // If it's a directory rule and matches, ensure the match is the full directory or a subdirectory
+                if (match && isDirRule) {
+                    if (normalizedPath !== currentRule && !normalizedPath.startsWith(currentRule + '/')) {
+                        match = false;
+                    }
+                }
+
+
+                if (match) {
+                    if (isNegation) {
+                        // console.log(`Path ${normalizedPath} explicitly included by rule: !${currentRule}`);
+                        isExplicitlyIncluded = true; // Mark as potentially included
+                        isIgnored = false; // Override previous ignore rules for this path
+                    } else {
+                        // console.log(`Path ${normalizedPath} ignored by rule: ${currentRule}`);
+                        isIgnored = true; // Mark as potentially ignored
+                        isExplicitlyIncluded = false; // An ignore rule overrides previous include rules for this path
+                    }
+                    // Note: Git's precedence rules are complex (last matching rule wins).
+                    // This simplified logic might not perfectly replicate Git.
+                    // For basic cases, checking if ignored and not explicitly included later works.
+                }
+            }
+
+            // Final decision: ignored if an ignore rule matched and no later include rule matched.
+            return isIgnored && !isExplicitlyIncluded;
+        };
+
+
+        // --- File/Directory Handling (using DataTransfer items) ---
+
+        // Recursively reads entries from a DirectoryEntry (older API used with drag/drop)
+        const readDirectoryEntries = async (directoryEntry, currentFilesList) => {
+            const currentPath = directoryEntry.fullPath; // Path from the root of the drop
+
+            // --- Check if the directory itself should be ignored ---
+            if (isPathIgnored(currentPath + '/')) { // Add trailing slash for directory check
+                console.log('Ignored directory:', currentPath);
+                return; // Stop processing this directory
+            }
+
+            const reader = directoryEntry.createReader();
+
+            // Promisified version of reader.readEntries
+            const readEntries = () => new Promise((resolve, reject) => {
+                reader.readEntries(entries => resolve(entries), error => reject(error));
+            });
+
+            let entries;
+            const entryPromises = [];
+
+            // Find .gitignore first within this directory if not already found globally
+            // Note: This only finds .gitignore at the *top* level of the drop/selection.
+            // A more robust solution would look for .gitignore in parent directories.
+            if (!gitignoreFound && directoryEntry.fullPath === rootPath) {
+                try {
+                    const gitignoreEntry = await new Promise((resolve, reject) => {
+                        directoryEntry.getFile('.gitignore', {}, resolve, () => resolve(null)); // Non-throwing getFile
+                    });
+                    if (gitignoreEntry) {
+                        await new Promise((resolveFile) => {
+                            gitignoreEntry.file(async (file) => {
+                                await parseGitignore(file);
+                                resolveFile();
+                            });
+                        });
+                    }
+                } catch (e) { /* Ignore error if .gitignore not found */
+                }
+            }
+
+
+            do {
+                try {
+                    entries = await readEntries();
+                    if (entries.length > 0) {
+                        for (const entry of entries) {
+                            const entryPath = entry.fullPath; // Path relative to the drop root
+
+                            if (entry.isDirectory) {
+                                // Recursively read subdirectory, passing the current file list
+                                entryPromises.push(readDirectoryEntries(entry, currentFilesList));
+                            } else if (entry.isFile) {
+                                // Check if the file path is ignored
+                                if (entry.name !== '.gitignore' && !isPathIgnored(entryPath)) {
+                                    // Get the File object and add relativePath property
+                                    entryPromises.push(new Promise((resolveFile) => {
+                                        entry.file(file => {
+                                            // Add the relative path to the file object
+                                            // Use fullPath which is relative to the dragged root
+                                            file.relativePath = entryPath;
+                                            // Check if it's a text file BEFORE adding
+                                            if (isTextFile(file)) {
+                                                currentFilesList.push(file);
+                                            } else {
+                                                // console.log(`Skipping non-text file: ${entryPath}`);
+                                            }
+                                            resolveFile();
+                                        }, (err) => {
+                                            console.error(`Error getting file object for ${entryPath}:`, err);
+                                            resolveFile(); // Resolve anyway to not block others
+                                        });
+                                    }));
+                                } else if (entry.name !== '.gitignore') {
+                                    console.log('Ignored file:', entryPath);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error reading directory entries for ${currentPath}:`, error);
+                    break; // Stop reading this directory on error
+                }
+            } while (entries && entries.length > 0);
+
+            await Promise.all(entryPromises); // Wait for all entries in this directory to be processed
+        };
+
+
+        // Handles the drop event using DataTransfer.items (more modern)
+        const handleDropWithItems = async (items) => {
+            showLoading('Đang quét files và thư mục...');
+
+            let collectedFiles = []; // Temporary list to collect files during scan
+            let processingPromises = [];
+
+            // Reset state for new drop
+            gitignoreRules = [];
+            gitignoreFound = false;
+            rootPath = ''; // Reset root path
+
+            const entries = [];
+            // Convert items to entries first to find root and .gitignore
+            for (const item of items) {
+                if (item.kind === 'file' && typeof item.webkitGetAsEntry === 'function') {
+                    entries.push(item.webkitGetAsEntry());
+                } else if (item.kind === 'file') {
+                    // Fallback for browsers not supporting webkitGetAsEntry (rare)
+                    const file = item.getAsFile();
+                    if (file) {
+                        file.relativePath = '/' + file.name; // Assign a basic relative path
+                        if (isTextFile(file)) { // Check immediately
+                            collectedFiles.push(file);
+                        }
+                    }
+                }
+            }
+
+            // Determine root path (first directory entry or '/' if only files)
+            const firstDir = entries.find(e => e && e.isDirectory);
+            if (firstDir) {
+                // Extract the base path from the first directory's fullPath
+                const pathParts = firstDir.fullPath.split('/');
+                if (pathParts.length > 2) { // e.g., /folder/subfolder -> root is /folder
+                    rootPath = '/' + pathParts[1];
+                } else {
+                    rootPath = '/'; // Root is the drop target itself
+                }
+            } else if (entries.length > 0 && entries[0]) {
+                // If only files, the root is effectively the drop target's root
+                rootPath = '/';
+            }
+            console.log('Root path determined as:', rootPath);
+
+
+            // --- Try to find and parse .gitignore at the root level ---
+            const rootGitignoreEntry = entries.find(e => e && e.isFile && e.name === '.gitignore' && e.fullPath === `${rootPath === '/' ? '' : rootPath}/.gitignore`);
+            if (rootGitignoreEntry) {
+                console.log('Found .gitignore at root level.');
+                await new Promise(resolve => {
+                    rootGitignoreEntry.file(async file => {
+                        await parseGitignore(file);
+                        resolve();
+                    });
+                });
+            } else {
+                console.log('No .gitignore found at the determined root level.');
+            }
+
+
+            // --- Process all entries ---
+            for (const entry of entries) {
+                if (!entry) continue;
+
+                if (entry.isDirectory) {
+                    // Start recursive reading for directories
+                    processingPromises.push(readDirectoryEntries(entry, collectedFiles));
+                } else if (entry.isFile) {
+                    const filePath = entry.fullPath;
+                    // Add files directly if they are not ignored and are text files
+                    if (entry.name !== '.gitignore' && !isPathIgnored(filePath)) {
+                        processingPromises.push(new Promise(resolve => {
+                            entry.file(file => {
+                                file.relativePath = filePath;
+                                if (isTextFile(file)) {
+                                    collectedFiles.push(file);
+                                } else {
+                                    // console.log(`Skipping non-text file: ${filePath}`);
+                                }
+                                resolve();
+                            }, err => {
+                                console.error(`Error getting file object for ${filePath}:`, err);
+                                resolve();
+                            });
+                        }));
+                    } else if (entry.name !== '.gitignore') {
+                        console.log(`Ignored file: ${filePath}`);
+                    }
+                }
+            }
+
+            // Wait for all directory scanning and file processing to complete
+            await Promise.all(processingPromises);
+
+            // Add the collected files to the main list
+            addFiles(collectedFiles); // Use addFiles to handle duplicates and updates
+            hideLoading();
+        };
+
+
+        // --- File/Directory Handling (using showDirectoryPicker) ---
+
+        // Recursively gets File objects from a DirectoryHandle (FileSystem Access API)
+        const getFilesFromDirectoryHandle = async (directoryHandle, currentPath = '') => {
+            let filesFromDir = [];
+            const currentFullPath = `${currentPath}/${directoryHandle.name}`;
+
+            // --- Check if the directory itself should be ignored ---
+            // Use currentFullPath + '/' for directory check
+            if (isPathIgnored(currentFullPath + '/')) {
+                console.log('Ignored directory (showDirectoryPicker):', currentFullPath);
+                return []; // Return empty array for ignored directory
+            }
+
+            // --- Try to find and parse .gitignore in the current directory ---
+            // This allows for nested .gitignore files, though git's behavior is more complex.
+            // For simplicity, we'll parse if found, potentially overriding parent rules (not git accurate).
+            let currentGitignoreFound = false;
+            try {
+                const gitignoreHandle = await directoryHandle.getFileHandle('.gitignore', { create: false });
+                const gitignoreFile = await gitignoreHandle.getFile();
+                // We might want to *merge* rules instead of replacing, but that's complex.
+                // For now, let's parse it if found. The isPathIgnored uses the latest `gitignoreRules`.
+                currentGitignoreFound = await parseGitignore(gitignoreFile);
+                if (currentGitignoreFound) console.log(`Found .gitignore in: ${currentFullPath}`);
+            } catch (e) {
+                // No .gitignore in this specific directory, inherit rules from parent (or none)
+            }
+
+
+            try {
+                for await (const entry of directoryHandle.values()) {
+                    const entryPath = `${currentFullPath}/${entry.name}`; // Construct relative path
+
+                    if (entry.kind === 'directory') {
+                        // Recursively get files from subdirectory
+                        const subFiles = await getFilesFromDirectoryHandle(entry, currentFullPath);
+                        filesFromDir = filesFromDir.concat(subFiles);
+                    } else if (entry.kind === 'file') {
+                        // Check if the file path is ignored
+                        if (entry.name !== '.gitignore' && !isPathIgnored(entryPath)) {
+                            try {
+                                const file = await entry.getFile();
+                                file.relativePath = entryPath; // Add relative path
+                                // Check if it's a text file BEFORE adding
+                                if (isTextFile(file)) {
+                                    filesFromDir.push(file);
+                                } else {
+                                    // console.log(`Skipping non-text file: ${entryPath}`);
+                                }
+                            } catch (fileError) {
+                                console.error(`Error getting file object for ${entryPath}:`, fileError);
+                            }
+                        } else if (entry.name !== '.gitignore') {
+                            console.log('Ignored file:', entryPath);
+                        }
+                    }
+                }
+            } catch (dirError) {
+                console.error(`Error iterating directory handle ${currentFullPath}:`, dirError);
+                // Decide if you want to stop or continue processing other parts
+            }
+
+            return filesFromDir;
+        };
+
+        // Requests directory access using the File System Access API
+        const requestDirectoryAccess = async () => {
+            if (!('showDirectoryPicker' in window)) {
+                alert('Trình duyệt của bạn không hỗ trợ chọn thư mục. Vui lòng kéo thả thư mục vào hoặc dùng trình duyệt Chrome/Edge mới nhất.');
+                return;
+            }
+
+            try {
+                showLoading('Đang chờ chọn thư mục...');
+                const directoryHandle = await window.showDirectoryPicker();
+                showLoading('Đang quét thư mục...');
+
+                // Reset state before scanning
+                gitignoreRules = [];
+                gitignoreFound = false;
+                rootPath = '/' + directoryHandle.name; // Set root path based on selected dir
+
+                // --- Try to parse .gitignore at the root of the selected directory ---
+                try {
+                    const gitignoreHandle = await directoryHandle.getFileHandle('.gitignore', { create: false });
+                    const gitignoreFile = await gitignoreHandle.getFile();
+                    await parseGitignore(gitignoreFile);
+                } catch (e) {
+                    console.log('Không tìm thấy .gitignore ở thư mục gốc đã chọn.');
+                }
+
+                // Start recursive file collection
+                const collectedFiles = await getFilesFromDirectoryHandle(directoryHandle, '');
+
+                showLoading(`Đã quét xong. Đang xử lý ${collectedFiles.length} file text...`);
+                addFiles(collectedFiles); // Add the collected files
+
+            } catch (err) {
+                // Handle user cancellation or other errors
+                if (err.name !== 'AbortError') {
+                    console.error('Lỗi khi truy cập thư mục:', err);
+                    alert(`Lỗi khi truy cập thư mục: ${err.message}`);
+                } else {
+                    console.log('Người dùng đã hủy chọn thư mục.');
+                }
+            } finally {
+                hideLoading();
+            }
+        };
+
+
+        // --- Core File Handling Logic ---
+
+        // Adds new files to the list, avoiding duplicates based on relativePath or name
+        const addFiles = (newFiles) => {
+            if (!Array.isArray(newFiles)) {
+                console.error("addFiles expected an array, received:", newFiles);
+                return;
+            }
+            const uniqueNewFiles = [];
+            const existingPaths = new Set(files.map(f => f.relativePath || f.name));
+
+            for (const file of newFiles) {
+                const pathKey = file.relativePath || file.name;
+                if (!existingPaths.has(pathKey)) {
+                    uniqueNewFiles.push(file);
+                    existingPaths.add(pathKey); // Add to set to prevent duplicates within the new batch
+                } else {
+                    console.log(`Skipping duplicate file: ${pathKey}`);
+                }
+            }
+
+            if (uniqueNewFiles.length > 0) {
+                files = [...files, ...uniqueNewFiles];
+                // Sort files alphabetically by relativePath or name
+                files.sort((a, b) => {
+                    const pathA = a.relativePath || a.name;
+                    const pathB = b.relativePath || b.name;
+                    return pathA.localeCompare(pathB);
+                });
+                displayFileList(); // Update the displayed list
+                readFilesContent(); // Read content of *all* files (including new ones)
+            } else {
+                console.log("No new unique files to add.");
+                // Optionally update stats even if no files were added
+                updateStats();
+            }
+        };
+
+        // Removes a file from the list by index
+        const removeFile = (index) => {
+            if (index >= 0 && index < files.length) {
+                const removedFile = files.splice(index, 1)[0];
+                console.log(`Removed file: ${removedFile.relativePath || removedFile.name}`);
+                displayFileList(); // Update display
+                readFilesContent(); // Re-read content
+            }
+        };
+
+        // Reads the content of all files in the `files` array and updates the textarea
+        const readFilesContent = async () => {
+            textContent.value = ''; // Clear previous content
+            if (files.length === 0) {
+                updateStats(); // Update stats even if empty
+                return;
+            }
+
+            showLoading(`Đang đọc ${files.length} file...`);
+            let combinedContent = '';
+            let readCount = 0;
+            const totalFiles = files.length;
+
+            for (const file of files) {
+                readCount++;
+                const displayPath = file.relativePath ? file.relativePath.replace(/^\//, '') : file.name; // Clean path for display
+                loadingStatus.textContent = `Đang đọc file ${readCount}/${totalFiles}: ${displayPath}`;
+                try {
+                    const content = await readFileAsync(file);
+                    combinedContent += `/* ===== ${displayPath} ===== */\n${content}\n\n`;
+                } catch (error) {
+                    console.error(`Lỗi khi đọc file ${displayPath}:`, error);
+                    // Include error message in the output
+                    combinedContent += `/* ===== ERROR: Không thể đọc file: ${displayPath} ===== */\n/* ${error.message} */\n\n`;
+                }
+                // Optional: Yield control briefly to prevent freezing on very large numbers of files
+                // await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            textContent.value = combinedContent;
+            updateStats(); // Update stats after reading
+            hideLoading();
+        };
+
+
+        // --- UI Updates ---
+
+        // Updates the statistics display (file count, total size, char count)
+        const updateStats = () => {
+            const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+            const charCount = textContent.value.length;
+            const gitignoreStatus = gitignoreFound ? ` | .gitignore: Có (${gitignoreRules.length} quy tắc)` : '';
+            stats.textContent = `Files: ${files.length} | Tổng kích thước: ${formatFileSize(totalSize)} | Context: ${charCount.toLocaleString()} ký tự${gitignoreStatus}`;
+        };
+
+        // Clears and redraws the list of files in the UI
+        const displayFileList = () => {
+            fileList.innerHTML = ''; // Clear existing list
+            if (files.length === 0) {
+                // Optionally show a message when the list is empty
+                fileList.innerHTML = '<p style="color: #888; font-size: 14px;">Chưa có file nào được chọn.</p>';
+            } else {
+                files.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'file-info'; // Add class for styling
+
+                    // Use relativePath if available, otherwise fallback to name
+                    // Remove leading slash from relativePath for cleaner display
+                    const displayName = file.relativePath ? file.relativePath.replace(/^\//, '') : file.name;
+
+                    fileInfo.innerHTML = `
+                        <div class="file-name" title="${displayName}">${displayName}</div>
+                        <div class="file-size">${formatFileSize(file.size || 0)}</div>
+                    `;
+
+                    const removeButton = document.createElement('button');
+                    removeButton.innerHTML = '✕'; // Simple 'x' icon
+                    removeButton.className = 'remove-btn'; // Use specific class
+                    removeButton.title = `Xóa file ${displayName}`; // Tooltip
+                    removeButton.onclick = (e) => {
+                        e.stopPropagation(); // Prevent triggering other events
+                        removeFile(index);
+                    };
+
+                    fileItem.appendChild(fileInfo);
+                    fileItem.appendChild(removeButton);
+                    fileList.appendChild(fileItem);
+                });
+            }
+            // Ensure drop area text/buttons are visible if file list is short
+            // This might need adjustment based on exact layout goals
+            // dropAreaTextContainer.style.display = files.length > 0 ? 'none' : 'block';
+
+            updateStats(); // Update stats whenever the list changes
+        };
+
+        // Shows the loading overlay with an optional status message
+        const showLoading = (statusText = 'Đang xử lý...') => {
+            loadingStatus.textContent = statusText;
+            loading.style.display = 'flex';
+        };
+
+        // Hides the loading overlay
+        const hideLoading = () => {
+            loading.style.display = 'none';
+            loadingStatus.textContent = ''; // Clear status text
+        };
+
+
+        // --- Clipboard and Copy ---
+
+        // Shows the "Copied!" success message briefly
+        const showCopySuccess = (success = true) => {
+            if (success) {
+                copySuccess.classList.add('show');
+                setTimeout(() => copySuccess.classList.remove('show'), 2000); // Hide after 2 seconds
+            } else {
+                // Provide more user-friendly feedback for copy failure
+                alert("Không thể sao chép nội dung vào clipboard. Trình duyệt của bạn có thể không hỗ trợ hoặc cần cấp quyền.");
+            }
+        };
+
+        // Fallback copy method using a temporary textarea (less reliable)
+        const fallbackCopy = (textToCopy) => {
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            textArea.style.position = 'fixed'; // Prevent scrolling
+            textArea.style.left = '-9999px'; // Move off-screen
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            let successful = false;
+            try {
+                successful = document.execCommand('copy');
+            } catch (err) {
+                console.error('Lỗi fallback copy:', err);
+                successful = false;
+            }
+            document.body.removeChild(textArea);
+            showCopySuccess(successful);
+        };
+
+        // Copies the content of the textarea to the clipboard
+        const copyContentToClipboard = async () => {
+            const content = textContent.value;
+            if (!content) {
+                alert("Không có nội dung để sao chép.");
+                return;
+            }
+
+            // Use modern Clipboard API if available and in secure context
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(content);
+                    showCopySuccess(true);
+                } catch (err) {
+                    console.error('Lỗi khi sao chép bằng Clipboard API:', err);
+                    // Attempt fallback if modern API fails
+                    fallbackCopy(content);
+                }
+            } else {
+                // Use fallback for insecure contexts or older browsers
+                console.warn('Clipboard API không khả dụng, sử dụng fallback.');
+                fallbackCopy(content);
+            }
+        };
+
+        // Handles the paste event on the document
+        const handlePaste = async (e) => {
+            // Check if the paste event originated from within the text area to avoid double handling
+            if (e.target === textContent) {
+                // Allow default paste behavior within the text area itself
+                // Update stats after a short delay to allow content to update
+                setTimeout(updateStats, 50);
+                return;
+            }
+
+            // Prevent default paste behavior elsewhere on the page
+            e.preventDefault();
+            console.log("Paste event detected on document.");
+
+            const clipboardData = e.clipboardData;
+            if (!clipboardData) {
+                console.log("Không có dữ liệu clipboard.");
+                return;
+            }
+
+            // --- Try reading files from clipboard first ---
+            if (clipboardData.files && clipboardData.files.length > 0) {
+                console.log(`Đang xử lý ${clipboardData.files.length} file từ clipboard...`);
+                showLoading(`Đang xử lý ${clipboardData.files.length} file từ clipboard...`);
+                const pastedFiles = Array.from(clipboardData.files); // Convert FileList to Array
+
+                // Filter for text files BEFORE adding
+                const textFilesToAdd = pastedFiles.filter(file => {
+                    if (isTextFile(file)) {
+                        // Assign a basic relative path for pasted files
+                        file.relativePath = '/' + file.name;
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (textFilesToAdd.length > 0) {
+                    addFiles(textFilesToAdd);
+                } else {
+                    console.log("Không tìm thấy file text hợp lệ trong clipboard.");
+                    hideLoading(); // Hide loading if no valid files found
+                }
+                // hideLoading() is called within addFiles -> readFilesContent if files were added
+                return; // Stop processing if files were handled
+            }
+
+            // --- If no files, try reading items (might include files or other data) ---
+            if (clipboardData.items && clipboardData.items.length > 0) {
+                console.log(`Đang xử lý ${clipboardData.items.length} item từ clipboard...`);
+                showLoading('Đang xử lý nội dung từ clipboard...');
+                await handleDropWithItems(clipboardData.items); // Reuse drop logic for items
+                // hideLoading() is called within handleDropWithItems
+                return; // Stop processing if items were handled
+            }
+
+            // --- Fallback: Try reading text content if no files/items ---
+            if (clipboardData.types.includes('text/plain')) {
+                console.log("Đang xử lý text từ clipboard...");
+                const pastedText = clipboardData.getData('text/plain');
+                if (pastedText) {
+                    // Create a dummy file object for the pasted text
+                    const blob = new Blob([pastedText], { type: 'text/plain' });
+                    const pastedFile = new File([blob], `pasted_text_${Date.now()}.txt`, { type: 'text/plain' });
+                    pastedFile.relativePath = '/' + pastedFile.name; // Assign path
+                    addFiles([pastedFile]); // Add as a single file
+                    // hideLoading() called within addFiles -> readFilesContent
+                } else {
+                    hideLoading();
+                }
+                return;
+            }
+
+            // If nothing useful was found
+            console.log("Không tìm thấy nội dung file hoặc text hợp lệ trong clipboard.");
+            hideLoading(); // Ensure loading is hidden
+        };
+
+
+        // --- Event Listeners ---
+
+        // Drag and Drop listeners on the drop area
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        // Prevent default drop behavior on the whole body to avoid browser opening the file
+        ['dragover', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        // Highlight drop area on drag enter/over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        // Unhighlight drop area on drag leave/drop
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        // Handle the actual drop event
+        dropArea.addEventListener('drop', async (e) => {
+            unhighlight(); // Ensure unhighlighted on drop
+            const dt = e.dataTransfer;
+            if (!dt) return;
+
+            if (dt.items && dt.items.length > 0 && typeof dt.items[0].webkitGetAsEntry === 'function') {
+                // Use the more modern DataTransfer.items API if available
+                await handleDropWithItems(dt.items);
+            } else if (dt.files && dt.files.length > 0) {
+                // Fallback to DataTransfer.files API
+                showLoading(`Đang xử lý ${dt.files.length} file...`);
+                const droppedFiles = Array.from(dt.files); // Convert FileList to Array
+
+                // Filter for text files BEFORE adding
+                const textFilesToAdd = droppedFiles.filter(file => {
+                    if (isTextFile(file)) {
+                        // Assign a basic relative path for dropped files if needed (no folder structure)
+                        file.relativePath = '/' + file.name;
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (textFilesToAdd.length > 0) {
+                    addFiles(textFilesToAdd);
+                } else {
+                    console.log("Không tìm thấy file text hợp lệ trong các file đã thả.");
+                    hideLoading();
+                }
+                // hideLoading() called within addFiles -> readFilesContent if files were added
+            }
+        });
+
+        // File Input change listener (for the "Chọn Files" button)
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                showLoading(`Đang xử lý ${e.target.files.length} file đã chọn...`);
+                const selectedFiles = Array.from(e.target.files); // Convert FileList to Array
+
+                // Filter for text files BEFORE adding
+                const textFilesToAdd = selectedFiles.filter(file => {
+                    if (isTextFile(file)) {
+                        // Assign relative path based on webkitdirectory info if available
+                        file.relativePath = file.webkitRelativePath ? '/' + file.webkitRelativePath : '/' + file.name;
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (textFilesToAdd.length > 0) {
+                    addFiles(textFilesToAdd);
+                } else {
+                    console.log("Không tìm thấy file text hợp lệ trong các file đã chọn.");
+                    hideLoading();
+                }
+                // hideLoading() called within addFiles -> readFilesContent if files were added
+            }
+            // Reset the input value to allow selecting the same file(s) again
+            e.target.value = null;
+        });
+
+        // Clear Button listener
+        clearBtn.addEventListener('click', () => {
+            files = []; // Clear the main file array
+            gitignoreRules = []; // Clear gitignore rules
+            gitignoreFound = false;
+            rootPath = '';
+            textContent.value = ''; // Clear the text area
+            displayFileList(); // Update the UI list (will show empty message)
+            // updateStats() is called by displayFileList
+            console.log("Đã xóa tất cả files và nội dung.");
+        });
+
+        // Copy Button listener
+        copyBtn.addEventListener('click', copyContentToClipboard);
+
+        // Paste listener on the whole document
+        document.addEventListener('paste', handlePaste);
+
+        // Update stats when text area content changes manually (e.g., if it were editable)
+        textContent.addEventListener('input', updateStats);
+
+        // --- Initial Setup ---
+        displayFileList(); // Initial display (shows empty message)
+        hideLoading(); // Ensure loading is hidden initially
+
+    </script>
 </body>
 
 </html>
